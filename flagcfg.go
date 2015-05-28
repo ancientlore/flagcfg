@@ -133,7 +133,7 @@ func getExePath() (string, string, string) {
 	}
 	p, n := filepath.Split(exePath)
 	e := filepath.Ext(n)
-	n = strings.TrimSuffix(n, "."+e)
+	n = strings.TrimSuffix(n, e)
 	return p, n, e
 }
 
