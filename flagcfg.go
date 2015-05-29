@@ -26,7 +26,8 @@ import (
 )
 
 var (
-	configFiles = make([]string, 0, 3)
+	configFiles    = make([]string, 0, 3)
+	parsedFilename string
 )
 
 // ParseSet parses the configuration data in TOML format, placing found values into the flag set.
@@ -106,17 +107,22 @@ func Parse() {
 		log.Fatalln("No configuration files specified")
 	}
 
-	filename := FindConfig()
-	if filename != "" {
-		log.Printf("Loading configuration from %s", filename)
-		b, err := ioutil.ReadFile(filename)
+	parsedFilename = FindConfig()
+	if parsedFilename != "" {
+		// log.Printf("Loading configuration from %s", parsedFilename)
+		b, err := ioutil.ReadFile(parsedFilename)
 		if err != nil {
-			log.Fatalf("Unable to read %s: %s", filename, err)
+			log.Fatalf("Unable to read %s: %s", parsedFilename, err)
 		}
 		if err := ParseSet(b, flag.CommandLine); err != nil {
 			log.Fatalln(err)
 		}
 	}
+}
+
+// Filename returns the name of the config file that was parsed by Parse()
+func Filename() string {
+	return parsedFilename
 }
 
 func getExePath() (string, string, string) {
