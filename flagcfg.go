@@ -17,16 +17,13 @@ import (
 	"github.com/BurntSushi/toml"
 	"io/ioutil"
 	"log"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 )
 
 var (
-	configFiles    = make([]string, 0, 3)
+	configLocator  Locator
 	parsedFilename string
 )
 
@@ -86,28 +83,22 @@ func ParseSet(tomlData []byte, set *flag.FlagSet) error {
 
 // AddFile adds a location to search for a config file.
 func AddFile(fileName string) {
-	configFiles = append(configFiles, fileName)
+	configLocator.AddFile(fileName)
 }
 
 // FindConfig returns the first config file that exists in the list.
 func FindConfig() string {
-	for _, filename := range configFiles {
-		_, err := os.Stat(filename)
-		if err == nil {
-			return filename
-		}
-	}
-	return ""
+	return configLocator.FindConfig()
 }
 
 // Parse will set each defined flag from the first configuration file
 // found in the list of those added.
 func Parse() {
-	if len(configFiles) == 0 {
+	if configLocator.Len() == 0 {
 		log.Fatalln("No configuration files specified")
 	}
 
-	parsedFilename = FindConfig()
+	parsedFilename = configLocator.FindConfig()
 	if parsedFilename != "" {
 		// log.Printf("Loading configuration from %s", parsedFilename)
 		b, err := ioutil.ReadFile(parsedFilename)
@@ -125,70 +116,16 @@ func Filename() string {
 	return parsedFilename
 }
 
-func getExePath() (string, string, string) {
-	var exePath, err = exec.LookPath(os.Args[0])
-	if err != nil {
-		log.Print("Warning: ", err)
-		exePath = os.Args[0]
-	}
-	s, err := filepath.Abs(exePath)
-	if err != nil {
-		log.Print("Warning: ", err)
-	} else {
-		exePath = s
-	}
-	p, n := filepath.Split(exePath)
-	e := filepath.Ext(n)
-	n = strings.TrimSuffix(n, e)
-	return p, n, e
-}
-
 // AddDefaults adds default config file locations, using the binary
 // name as a base. It will look for the file specificed by
 // {NAME}_CONFIG, as well as "{NAME}.config" in various locations.
 func AddDefaults() {
-	_, n, _ := getExePath()
-	AddDefaultFiles(strings.ToUpper(n)+"_CONFIG", n+".config")
+	configLocator.AddDefaults()
 }
 
 // AddDefaultFiles adds default config file locations to search,
 // using the given environment variable name and name of the
 // config file to look for (excluding path).
 func AddDefaultFiles(envName, cfgName string) {
-	// look at environment variable first
-	if envName != "" {
-		cfgFile := os.Getenv(envName)
-		if cfgFile != "" {
-			AddFile(cfgFile)
-		}
-	}
-
-	// break down EXE name
-	exePath, exeName, _ := getExePath()
-
-	// current folder
-	wd, err := os.Getwd()
-	if err == nil {
-		AddFile(filepath.Join(wd, cfgName))
-	}
-
-	// Look in home folder
-	home := os.Getenv("HOME")
-	if home != "" {
-		AddFile(filepath.Join(home, ".config", exeName, cfgName))
-	}
-
-	// some etc folder relative to binary, assuming binary isn't directly in /bin
-	if strings.Contains(exePath, filepath.FromSlash("/bin/")) && exePath != filepath.FromSlash("/bin") {
-		AddFile(filepath.Join(strings.Replace(exePath, filepath.FromSlash("/bin/"), filepath.FromSlash("/etc/"), 1), cfgName))
-	}
-
-	// etc locations
-	AddFile(filepath.Join(filepath.FromSlash("/etc"), exeName, cfgName))
-	AddFile(filepath.Join(filepath.FromSlash("/etc"), cfgName))
-
-	// Same folder as binary
-	AddFile(filepath.Join(exePath, cfgName))
-
-	// log.Print(configFiles)
+	configLocator.AddDefaultFiles(envName, cfgName)
 }
