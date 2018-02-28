@@ -4,22 +4,22 @@
 // flag contains a dash or a period, those are converted to
 // underscores.
 //
-// Flags that have aready been assigned are not overwritten.
+// Flags that have already been assigned are not overwritten.
 //
 // This package can be used together with github.com/facebookgo/flagenv
 // to load flags from a config file, environment variable, or command-line.
 package flagcfg
 
 import (
-	"errors"
 	"flag"
 	"fmt"
-	"github.com/BurntSushi/toml"
 	"io/ioutil"
 	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/BurntSushi/toml"
 )
 
 var (
@@ -36,7 +36,7 @@ func ParseSet(tomlData []byte, set *flag.FlagSet) error {
 
 	var values map[string]interface{}
 	if _, err := toml.Decode(string(tomlData), &values); err != nil {
-		return errors.New(fmt.Sprintf("Unable to parse TOML: %s", err))
+		return fmt.Errorf("Unable to parse TOML: %s", err)
 	}
 
 	// log.Printf("%#v", values)
@@ -70,7 +70,7 @@ func ParseSet(tomlData []byte, set *flag.FlagSet) error {
 				case flag.Value:
 					ferr = f.Value.Set(val.(flag.Value).String())
 				default:
-					ferr = errors.New(fmt.Sprintf("Unable to map type of %#v", val))
+					ferr = fmt.Errorf("Unable to map type of %#v", val)
 				}
 				if ferr != nil {
 					err = fmt.Errorf("failed to set flag %q with value %q", f.Name, val)
